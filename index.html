@@ -408,6 +408,22 @@
       .booking .row-widget {
         padding: 18px;
       }
+      /* Calendly renders too large (zoomed in) at the narrow modal width on   */
+      /* phones, so zoom it out to ~75%: give the frame a fixed height and      */
+      /* over-size the iframe (1 / 0.75 = 133.33%) then scale it back down to   */
+      /* fill the frame exactly.                                                */
+      .calendar-frame {
+        height: min(72vh, 760px);
+      }
+      .calendar-frame iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 133.3333%;
+        height: 133.3333%;
+        transform: scale(0.75);
+        transform-origin: top left;
+      }
     }
 
     /* Type name, horizontally centered inside the main widget. */
