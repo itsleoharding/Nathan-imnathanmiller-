@@ -1,0 +1,6 @@
+# Local Claude Code / preview dev config (not needed for deployment)
+.claude/
+
+# OS junk
+Thumbs.db
+.DS_Store

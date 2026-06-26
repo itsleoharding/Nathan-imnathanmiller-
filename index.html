@@ -314,26 +314,53 @@
       box-shadow: 0 30px 70px -45px rgba(0, 0, 0, 0.9);
     }
 
-    /* ============ IN-PAGE BOOKING WIDGET ============ */
-    /* Revealed when the hero CTA is clicked. Reuses the .row-widget shell so   */
-    /* it matches the deliverable type widgets exactly; this only adds the      */
-    /* show/hide transition and the Calendly embed frame.                       */
+    /* ============ BOOKING MODAL ============ */
+    /* Opened by the hero CTA. Rendered OUTSIDE the scaled .page (like the      */
+    /* lightbox) as a fixed, viewport-anchored overlay, so opening it never     */
+    /* grows or scroll-traps the clipped, scaled page — which is what glitched  */
+    /* on mobile. The inner card reuses the .row-widget shell so it still looks */
+    /* like a deliverable widget.                                              */
+    .booking {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .booking[hidden] {
+      display: none;
+    }
+    .booking.is-open {
+      opacity: 1;
+    }
+    .booking-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 10, 9, 0.86);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .booking-panel {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 760px;
+      max-height: 92vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Inner card: same shell as the deliverable widgets. */
     .calendar-widget {
       position: relative;
-      opacity: 0;
-      transform: translateY(28px);
-      transition: opacity 0.5s ease, transform 0.5s ease;
     }
-    .calendar-widget.is-open {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    /* Always-reachable close control. On mobile, once the embed is open it is */
-    /* awkward to scroll back to the hero CTA, so this guarantees a way out.   */
     .calendar-close {
       position: absolute;
-      top: 18px;
-      right: 18px;
+      top: 14px;
+      right: 14px;
       width: 40px;
       height: 40px;
       border-radius: 9999px;
@@ -368,14 +395,19 @@
       border: 2px solid rgba(177, 247, 204, 0.55);
       box-shadow:
         0 0 0 1px rgba(177, 247, 204, 0.08),
-        0 24px 70px -28px rgba(177, 247, 204, 0.35),
         0 18px 50px -30px rgba(0, 0, 0, 0.8);
     }
     .calendar-frame iframe {
       display: block;
       width: 100%;
-      height: 720px;
+      height: min(72vh, 760px);
       border: 0;
+    }
+    /* Tighten the card padding on phones so the embed gets more width. */
+    @media (max-width: 600px) {
+      .booking .row-widget {
+        padding: 18px;
+      }
     }
 
     /* Type name, horizontally centered inside the main widget. */
@@ -763,7 +795,7 @@
         transition: none;
       }
       .cta-button,
-      .calendar-widget,
+      .booking,
       .calendar-close,
       .lightbox,
       .lightbox-close,
@@ -825,7 +857,7 @@
         <h1 class="heading fade-up mt-8" style="font-size: 38.622px;">
           I've Spent The Last <span style="color: var(--sage);">Five</span> Days Working<br />
           On <u>Something</u> That Allows You To Do<br />
-          An Extra <span style="color: var(--sage);">$20-30k</span> Per Month<br />
+          An Extra <span style="color: var(--sage);">$30-50k</span> Per Month<br />
           Selling <em>Scale Theory</em> <u>One To Many</u>
         </h1>
 
@@ -845,8 +877,8 @@
 
         <!-- CALL TO ACTION -->
         <div class="fade-up mt-10">
-          <!-- CTA: reveals the in-page booking widget below (JS). The href is  -->
-          <!-- a no-JS fallback that opens the Calendly page in a new tab.       -->
+          <!-- CTA: opens the booking modal (JS). The href is a no-JS fallback  -->
+          <!-- that opens the Calendly page in a new tab.                        -->
           <a href="https://calendly.com/leo-carbon-consulting/discovery-call"
              class="cta-button" id="cta-book"
              aria-controls="calendar-widget" aria-expanded="false"
@@ -856,23 +888,6 @@
           </a>
         </div>
 
-        <!-- IN-PAGE BOOKING WIDGET -->
-        <!-- Same design + width as the sample-deliverable type widgets, holding -->
-        <!-- the Calendly scheduling embed. Hidden until the CTA is clicked.     -->
-        <div class="deliverables-scale">
-          <div class="row-widget calendar-widget mt-10" id="calendar-widget" hidden>
-            <button class="calendar-close" type="button" id="calendar-close"
-                    aria-label="Close scheduling widget">&times;</button>
-            <div class="calendar-frame">
-              <iframe
-                src="https://calendly.com/leo-carbon-consulting/discovery-call"
-                title="Schedule a discovery call with Carbon Consulting"
-                loading="lazy"
-                allow="fullscreen">
-              </iframe>
-            </div>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -1121,6 +1136,29 @@
       <div class="lightbox-body"></div>
       <button class="lightbox-next" type="button" aria-label="Next slide">&#8250;</button>
       <p class="lightbox-count" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- ============ BOOKING MODAL (rendered outside the scaled .page) ============ -->
+  <!-- Fixed overlay (same proven mechanism as the lightbox) holding the Calendly -->
+  <!-- embed in a card styled like the deliverable widgets. Living outside .page  -->
+  <!-- means opening it never grows or scroll-traps the clipped, scaled page.     -->
+  <div class="booking" id="calendar-widget" role="dialog" aria-modal="true"
+       aria-label="Schedule a discovery call" hidden>
+    <div class="booking-backdrop" data-booking-dismiss></div>
+    <div class="booking-panel">
+      <div class="row-widget calendar-widget">
+        <button class="calendar-close" type="button" id="calendar-close"
+                aria-label="Close scheduling widget">&times;</button>
+        <div class="calendar-frame">
+          <iframe
+            src="https://calendly.com/leo-carbon-consulting/discovery-call"
+            title="Schedule a discovery call with Carbon Consulting"
+            loading="lazy"
+            allow="fullscreen">
+          </iframe>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1471,73 +1509,73 @@
     })();
 
     // ===========================================================
-    // IN-PAGE BOOKING WIDGET
-    // The hero CTA reveals a Calendly embed styled like the deliverable
-    // widgets, instead of navigating away. The anchor keeps a real href so it
-    // still opens Calendly in a new tab if JS is disabled. Revealing the widget
-    // changes the page height; the ResizeObserver below re-fits the page-clip.
+    // BOOKING MODAL
+    // The hero CTA opens a Calendly embed in a fixed overlay rendered OUTSIDE
+    // the scaled .page (like the lightbox), so it never grows or scroll-traps
+    // the clipped page — the source of the mobile glitch. Body scroll is locked
+    // while open. The anchor keeps a real href so it still opens Calendly in a
+    // new tab if JS is disabled.
     // ===========================================================
     (function () {
       var cta = document.getElementById("cta-book");
-      var widget = document.getElementById("calendar-widget");
+      var modal = document.getElementById("calendar-widget");
+      if (!cta || !modal) return;
       var closeBtn = document.getElementById("calendar-close");
-      if (!cta || !widget) return;
+      var backdrop = modal.querySelector(".booking-backdrop");
       var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var lastFocus = null;
 
-      function openWidget() {
-        widget.hidden = false;
+      function openModal() {
+        lastFocus = document.activeElement;
+        modal.hidden = false;
         cta.setAttribute("aria-expanded", "true");
         if (!reduce) {
-          // Force a reflow so the reveal transition runs from 0.
-          void widget.offsetWidth;
+          // Force a reflow so the fade-in runs from 0.
+          void modal.offsetWidth;
         }
-        widget.classList.add("is-open");
-        // Defer the scroll by two frames so the page-clip height (refit by a
-        // ResizeObserver once the widget appears) is current first. Otherwise
-        // the scroll target is clamped against the old, shorter page and on
-        // mobile dumps the user at the bottom of the widget with no way back.
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            widget.scrollIntoView({
-              behavior: reduce ? "auto" : "smooth",
-              block: "start",
-            });
-          });
+        modal.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+        if (closeBtn) closeBtn.focus();
+        document.addEventListener("keydown", onKey);
+      }
+
+      function closeModal() {
+        cta.setAttribute("aria-expanded", "false");
+        modal.classList.remove("is-open");
+        document.body.style.overflow = "";
+        document.removeEventListener("keydown", onKey);
+        function done() {
+          modal.hidden = true;
+          if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+        if (reduce) {
+          done();
+          return;
+        }
+        modal.addEventListener("transitionend", function onEnd(e) {
+          if (e.target !== modal || e.propertyName !== "opacity") return;
+          modal.removeEventListener("transitionend", onEnd);
+          // Guard against a re-open that happened mid fade-out.
+          if (!modal.classList.contains("is-open")) done();
         });
       }
 
-      function closeWidget() {
-        cta.setAttribute("aria-expanded", "false");
-        widget.classList.remove("is-open");
-        // Bring the user back to the CTA so they're never stranded down-page.
-        cta.scrollIntoView({
-          behavior: reduce ? "auto" : "smooth",
-          block: "center",
-        });
-        if (reduce) {
-          widget.hidden = true;
-          return;
+      function onKey(e) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeModal();
         }
-        // Hide only after the fade-out finishes so it animates out cleanly.
-        widget.addEventListener("transitionend", function onEnd(e) {
-          if (e.target !== widget || e.propertyName !== "opacity") return;
-          widget.removeEventListener("transitionend", onEnd);
-          // Guard against a re-open that happened mid fade-out.
-          if (!widget.classList.contains("is-open")) widget.hidden = true;
-        });
       }
 
       cta.addEventListener("click", function (e) {
         e.preventDefault();
-        if (widget.hidden) openWidget();
-        else closeWidget();
+        // Use the is-open class (not the hidden attr, which only flips after the
+        // fade-out) so a quick close-then-click reliably re-opens.
+        if (modal.classList.contains("is-open")) closeModal();
+        else openModal();
       });
-
-      if (closeBtn) {
-        closeBtn.addEventListener("click", function () {
-          if (!widget.hidden) closeWidget();
-        });
-      }
+      if (closeBtn) closeBtn.addEventListener("click", closeModal);
+      if (backdrop) backdrop.addEventListener("click", closeModal);
     })();
 
     // ===========================================================
