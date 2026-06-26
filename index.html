@@ -53,6 +53,7 @@
     .pt-8 { padding-top: 2rem; }
     .pt-10 { padding-top: 2.5rem; }
     .pb-0 { padding-bottom: 0; }
+    .pb-10 { padding-bottom: 2.5rem; }
     .pb-20 { padding-bottom: 5rem; }
     .mt-4 { margin-top: 1rem; }
     .mt-6 { margin-top: 1.5rem; }
@@ -318,6 +319,7 @@
     /* it matches the deliverable type widgets exactly; this only adds the      */
     /* show/hide transition and the Calendly embed frame.                       */
     .calendar-widget {
+      position: relative;
       opacity: 0;
       transform: translateY(28px);
       transition: opacity 0.5s ease, transform 0.5s ease;
@@ -325,6 +327,37 @@
     .calendar-widget.is-open {
       opacity: 1;
       transform: translateY(0);
+    }
+    /* Always-reachable close control. On mobile, once the embed is open it is */
+    /* awkward to scroll back to the hero CTA, so this guarantees a way out.   */
+    .calendar-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(177, 247, 204, 0.35);
+      background-color: rgba(20, 20, 20, 0.86);
+      color: var(--ink);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 3;
+      transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    }
+    .calendar-close:hover {
+      background-color: var(--sage);
+      color: #16241b;
+      transform: scale(1.06);
+    }
+    .calendar-close:focus-visible {
+      outline: 3px solid var(--sage);
+      outline-offset: 3px;
     }
     .calendar-frame {
       position: relative;
@@ -731,6 +764,7 @@
       }
       .cta-button,
       .calendar-widget,
+      .calendar-close,
       .lightbox,
       .lightbox-close,
       .lightbox-prev,
@@ -827,6 +861,8 @@
         <!-- the Calendly scheduling embed. Hidden until the CTA is clicked.     -->
         <div class="deliverables-scale">
           <div class="row-widget calendar-widget mt-10" id="calendar-widget" hidden>
+            <button class="calendar-close" type="button" id="calendar-close"
+                    aria-label="Close scheduling widget">&times;</button>
             <div class="calendar-frame">
               <iframe
                 src="https://calendly.com/leo-carbon-consulting/discovery-call"
@@ -849,7 +885,7 @@
     <!-- in-page lightbox, and also carries a real href to the file as a  -->
     <!-- no-JS fallback.                                                  -->
     <!-- ============================================================= -->
-    <section class="pt-10 pb-20">
+    <section class="pt-10 pb-10">
       <div class="container-narrow">
         <h2 class="heading fade-up" style="font-size: 41.4px;">
           Here Are The Sample Deliverables:
@@ -1003,7 +1039,7 @@
               <p class="sample-label">Slideshow</p>
               <div class="mt-6">
                 <a class="cta-button cta-sm"
-                   href="[ASSET_SLIDESHOW]"
+                   href="Sample%20Deliverables/Slideshow%20for%20Nathan.pdf"
                    data-lb data-lb-type="pdf" data-lb-title="Webinar slideshow"
                    target="_blank" rel="noopener noreferrer">
                   <span class="cta-main">Get A Closer View</span>
@@ -1444,6 +1480,7 @@
     (function () {
       var cta = document.getElementById("cta-book");
       var widget = document.getElementById("calendar-widget");
+      var closeBtn = document.getElementById("calendar-close");
       if (!cta || !widget) return;
       var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -1455,15 +1492,28 @@
           void widget.offsetWidth;
         }
         widget.classList.add("is-open");
-        widget.scrollIntoView({
-          behavior: reduce ? "auto" : "smooth",
-          block: "start",
+        // Defer the scroll by two frames so the page-clip height (refit by a
+        // ResizeObserver once the widget appears) is current first. Otherwise
+        // the scroll target is clamped against the old, shorter page and on
+        // mobile dumps the user at the bottom of the widget with no way back.
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            widget.scrollIntoView({
+              behavior: reduce ? "auto" : "smooth",
+              block: "start",
+            });
+          });
         });
       }
 
       function closeWidget() {
         cta.setAttribute("aria-expanded", "false");
         widget.classList.remove("is-open");
+        // Bring the user back to the CTA so they're never stranded down-page.
+        cta.scrollIntoView({
+          behavior: reduce ? "auto" : "smooth",
+          block: "center",
+        });
         if (reduce) {
           widget.hidden = true;
           return;
@@ -1482,6 +1532,12 @@
         if (widget.hidden) openWidget();
         else closeWidget();
       });
+
+      if (closeBtn) {
+        closeBtn.addEventListener("click", function () {
+          if (!widget.hidden) closeWidget();
+        });
+      }
     })();
 
     // ===========================================================
