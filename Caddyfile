@@ -1,0 +1,14 @@
+# Caddy serves the static site on the port Railway injects via $PORT
+# (falling back to 80 for local runs). TLS is terminated at Railway's edge,
+# so we serve plain HTTP here.
+{
+	admin off
+	persist_config off
+	auto_https off
+}
+
+:{$PORT:80} {
+	root * /srv
+	encode gzip
+	file_server
+}
