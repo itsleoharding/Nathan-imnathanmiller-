@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Website for Nathan</title>
+
+  <!-- Preconnect to every origin we fetch from on demand so the connection  -->
+  <!-- is already warm: Google Fonts, the PDF.js CDN (loaded when a PDF       -->
+  <!-- deliverable is opened), and Calendly (loaded when the CTA is clicked). -->
+  <!-- Google Fonts: Roboto Slab (400, 900) + JetBrains Mono (500, 700) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://calendly.com" />
+  <link rel="preconnect" href="https://assets.calendly.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Roboto+Slab:wght@400;900&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    :root {
+      /* The agency's colours (sage on charcoal) carry the whole page. */
+      --base: #2e2e2e;
+      --surface: #272727;
+      --card: #333333;
+      --sage: #b1f7cc;
+      --ink: #f4f4f1;
+      --muted: #a6a6a6;
+      --hairline: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ---- Base reset. Replaces the parts of Tailwind's preflight the layout */
+    /* relies on (border-box sizing + zeroed default margins) now that the    */
+    /* Tailwind runtime CDN has been removed for speed. ---- */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+    body,
+    h1, h2, h3, h4, h5, h6,
+    p, figure {
+      margin: 0;
+    }
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* ---- The only Tailwind spacing utilities the page used, as plain CSS. - */
+    .pt-8 { padding-top: 2rem; }
+    .pt-10 { padding-top: 2.5rem; }
+    .pb-0 { padding-bottom: 0; }
+    .pb-20 { padding-bottom: 5rem; }
+    .mt-4 { margin-top: 1rem; }
+    .mt-6 { margin-top: 1.5rem; }
+    .mt-8 { margin-top: 2rem; }
+    .mt-10 { margin-top: 2.5rem; }
+
+    html {
+      scroll-behavior: smooth;
+      /* Stop iOS Safari / Android Chrome from auto-inflating ("boosting")    */
+      /* body text on real devices, which throws the scaled layout out of     */
+      /* proportion even though desktop devtools emulation looks correct.     */
+      -webkit-text-size-adjust: 100%;
+      -moz-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      background-color: var(--base);
+      color: var(--ink);
+      font-family: "Roboto Slab", serif;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      position: relative;
+      overflow-x: hidden;
+      /* Centered throughout */
+      text-align: center;
+    }
+
+    /* ============ ATMOSPHERE ============ */
+
+    /* Fixed grain overlay at ~0.10 opacity */
+    .grain-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.1;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Fixed faint sage grid overlay at ~0.04 opacity, 72px cell */
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(to right, var(--sage) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--sage) 1px, transparent 1px);
+      background-size: 72px 72px;
+    }
+
+    /* One soft sage radial glow at the very top, behind the hero, low opacity */
+    .hero-glow {
+      position: fixed;
+      top: -240px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1100px;
+      height: 700px;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(177, 247, 204, 0.12) 0%,
+        rgba(177, 247, 204, 0.05) 38%,
+        transparent 70%
+      );
+    }
+
+    /* Clipping wrapper for the scaled page. transform: scale() leaves the    */
+    /* element's full unscaled height in layout, which otherwise adds a large */
+    /* empty gap below the content. This wrapper is given an explicit height  */
+    /* (the page's visual height) in JS and clips the leftover, so the page   */
+    /* ends exactly at the content on every browser.                          */
+    .page-clip {
+      position: relative;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    /* Keep real content above the overlays */
+    .page {
+      position: relative;
+      z-index: 2;
+      /* Uniformly scale every element to 0.5625 (75% of 75%) so the design   */
+      /* sits at the same small size on every device. We use transform:scale  */
+      /* rather than `zoom` because `zoom` is non-standard and several mobile  */
+      /* engines (iOS Safari, in-app webviews) fail to scale vw-based clamp()  */
+      /* text under it, which left the text oversized on real phones.          */
+      /* transform scales the painted result uniformly, so it is consistent.  */
+      /* width = 1 / 0.5625 = 177.7778% so that after scaling it fills the     */
+      /* viewport exactly; origin top-left anchors it to the corner.           */
+      /* Mobile / tablet: render the SAME fixed-width layout as desktop and    */
+      /* scale that whole canvas uniformly to the viewport (factor computed in */
+      /* the head script), so a phone shows a pixel-faithful, smaller copy of  */
+      /* the desktop view — identical spacing, line breaks, structure, flow.   */
+      transform: scale(var(--page-scale, 0.43));
+      transform-origin: top left;
+      width: 910px;
+    }
+
+    /* On laptops and desktops, double the diagonal size of every element.    */
+    /* Doubling the diagonal means doubling the linear scale: 0.5625 -> 1.125. */
+    /* width = 1 / 1.125 = 88.8889% so it still fills the viewport exactly.    */
+    /* Desktop / laptop: keep the original percentage-width + 1.125 scale      */
+    /* untouched. Font sizes are now fixed (below) at exactly the values this  */
+    /* breakpoint already produced, so desktop renders identically.           */
+    @media (min-width: 1024px) {
+      .page {
+        transform: scale(1.125);
+        width: 88.8889%;
+      }
+    }
+
+    /* ============ CONTAINER ============ */
+    .container-narrow {
+      max-width: 880px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+
+    /* ============ TYPOGRAPHY HELPERS ============ */
+    .font-black {
+      font-family: "Roboto Slab", serif;
+      font-weight: 900;
+    }
+    .mono {
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .eyebrow {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--sage);
+      font-size: 1.2552rem;
+    }
+
+    .heading {
+      font-family: "Roboto Slab", serif;
+      font-weight: 900;
+      line-height: 1.12;
+      color: var(--ink);
+    }
+
+    .heading em {
+      font-style: italic;
+    }
+
+    .body-copy {
+      font-family: "Roboto Slab", serif;
+      font-weight: 400;
+      color: var(--ink);
+      line-height: 1.75;
+      font-size: 1.075rem;
+    }
+
+    .body-copy p + p {
+      margin-top: 1.35rem;
+    }
+
+    /* ============ VIDEO FRAME ============ */
+    .video-frame {
+      position: relative;
+      width: 92.5%;
+      margin-left: auto;
+      margin-right: auto;
+      aspect-ratio: 16 / 9;
+      border-radius: 16px;
+      overflow: hidden;
+      background-color: var(--card);
+      border: 2px solid rgba(177, 247, 204, 0.55);
+      box-shadow:
+        0 0 0 1px rgba(177, 247, 204, 0.08),
+        0 24px 70px -28px rgba(177, 247, 204, 0.35),
+        0 18px 50px -30px rgba(0, 0, 0, 0.8);
+    }
+
+    .video-frame iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .play-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 84px;
+      height: 84px;
+      border-radius: 9999px;
+      background-color: var(--sage);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 14px 40px -10px rgba(177, 247, 204, 0.55);
+      z-index: 2;
+    }
+
+    .play-button svg {
+      width: 34px;
+      height: 34px;
+      margin-left: 5px;
+      fill: #16241b;
+    }
+
+    .duration-badge {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+      background-color: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--hairline);
+      padding: 4px 10px;
+      border-radius: 8px;
+      z-index: 2;
+    }
+
+    /* ============================================================= */
+    /* SAMPLE-DELIVERABLES ZONE                                       */
+    /* Each card is just the type name + a CTA; clicking the CTA opens */
+    /* the real deliverable in the in-page lightbox (see end of body). */
+    /* ============================================================= */
+
+    /* The outer "main widget" that houses one deliverable type: its centered */
+    /* heading + the horizontal slider of sample cards. Internal padding (56px)*/
+    /* matches the doubled element gaps so the rhythm stays uniform.           */
+    /* Wrapper that holds the four deliverable widgets at the SAME width as the */
+    /* hero video placeholder (92.5% of the content column), centered. The      */
+    /* section heading stays full width above them. Vertical gaps between the   */
+    /* widgets are left untouched so more can be added later.                   */
+    .deliverables-scale {
+      width: 92.5%;
+      max-width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .row-widget {
+      background-color: var(--surface);
+      border: 1px solid rgba(177, 247, 204, 0.18);
+      border-radius: 22px;
+      padding: 36px;
+      box-shadow: 0 30px 70px -45px rgba(0, 0, 0, 0.9);
+    }
+
+    /* ============ IN-PAGE BOOKING WIDGET ============ */
+    /* Revealed when the hero CTA is clicked. Reuses the .row-widget shell so   */
+    /* it matches the deliverable type widgets exactly; this only adds the      */
+    /* show/hide transition and the Calendly embed frame.                       */
+    .calendar-widget {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .calendar-widget.is-open {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .calendar-frame {
+      position: relative;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background-color: #ffffff;
+      border: 2px solid rgba(177, 247, 204, 0.55);
+      box-shadow:
+        0 0 0 1px rgba(177, 247, 204, 0.08),
+        0 24px 70px -28px rgba(177, 247, 204, 0.35),
+        0 18px 50px -30px rgba(0, 0, 0, 0.8);
+    }
+    .calendar-frame iframe {
+      display: block;
+      width: 100%;
+      height: 720px;
+      border: 0;
+    }
+
+    /* Type name, horizontally centered inside the main widget. */
+    .row-heading {
+      font-family: "Roboto Slab", serif;
+      font-weight: 900;
+      line-height: 1.12;
+      color: var(--ink);
+      text-align: center;
+      font-size: 26px;
+    }
+
+    /* Centered sample name. */
+    .sample-label {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--sage);
+      text-align: center;
+    }
+
+    /* Qualifier in brackets (e.g. "(Static)") forced onto its own line under  */
+    /* the name so a long label never wraps unevenly.                          */
+    .sample-sub {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+    }
+
+    /* ============ SAMPLE CARD (sub-widget inside the slider) ============ */
+    /* Internal padding (56px) matches the doubled element gaps.              */
+    .block-card {
+      background-color: var(--card);
+      border: 1px dashed rgba(177, 247, 204, 0.45);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 24px 60px -40px rgba(0, 0, 0, 0.9);
+      text-align: center;
+    }
+
+    /* ============ DELIVERABLES SLIDER ============ */
+    /* Horizontal scroll-snap carousel. Cards bleed to the widget's inner     */
+    /* edges via negative margins, and the next card peeks to signal scroll.  */
+    .deliverables-slider {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-padding: 0 36px;
+      -webkit-overflow-scrolling: touch;
+      /* Negative margins match the .row-widget padding (36px) so the cards    */
+      /* bleed to the widget's inner edges and the next one peeks.             */
+      padding: 10px 36px 28px;
+      margin-left: -36px;
+      margin-right: -36px;
+      text-align: left;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(177, 247, 204, 0.4) transparent;
+    }
+
+    .deliverables-slider::-webkit-scrollbar {
+      height: 8px;
+    }
+    .deliverables-slider::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .deliverables-slider::-webkit-scrollbar-thumb {
+      background-color: rgba(177, 247, 204, 0.3);
+      border-radius: 9999px;
+    }
+
+    .deliverables-slider .block-card {
+      flex: 0 0 auto;
+      width: 250px;
+      scroll-snap-align: center;
+    }
+
+    /* Single-card widget (e.g. Slideshow): center the lone card and turn off  */
+    /* horizontal scrolling since there's nothing else to swipe to.            */
+    .deliverables-slider.is-single {
+      justify-content: center;
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+
+    /* Small swipe affordance under the slider. */
+    .slider-hint {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ============ CALL TO ACTION BUTTON ============ */
+    /* Flat sage with dark text (the agency's colours). Two-line structure:    */
+    /* bold serif main line + mono sub-line, with a hover lift.                */
+    .cta-button {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      width: fit-content;
+      max-width: 100%;
+      background-color: var(--sage);
+      color: #16241b;
+      padding: 16px 30px;
+      border-radius: 14px;
+      text-decoration: none;
+      box-shadow: 0 18px 45px -18px rgba(177, 247, 204, 0.6);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 24px 55px -16px rgba(177, 247, 204, 0.7);
+    }
+
+    .cta-button:focus-visible {
+      outline: 3px solid var(--ink);
+      outline-offset: 4px;
+    }
+
+    .cta-main {
+      font-family: "Roboto Slab", serif;
+      font-weight: 900;
+      font-size: 1.85rem;
+      line-height: 1.12;
+      color: #16241b;
+      white-space: nowrap;
+    }
+
+    .cta-sub {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 0.6526rem;
+      color: rgba(22, 36, 27, 0.72);
+      white-space: nowrap;
+    }
+
+    /* In-slot variant: fills the card width and lets the longer sub-line wrap. */
+    .cta-button.cta-sm {
+      padding: 13px 26px;
+      gap: 4px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .cta-button.cta-sm .cta-main {
+      font-size: 1.041rem;
+    }
+    .cta-button.cta-sm .cta-sub {
+      font-size: 0.5165rem;
+      color: rgba(22, 36, 27, 0.88);
+      white-space: normal;
+      text-align: center;
+    }
+
+    /* ============ FADE UP ON SCROLL ============ */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+      will-change: opacity, transform;
+    }
+    .fade-up.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ============ LIGHTBOX (in-page asset viewer) ============ */
+    /* Lives OUTSIDE the scaled .page so it fills the real viewport and its    */
+    /* position:fixed is relative to the screen (a transformed ancestor would  */
+    /* otherwise become its containing block).                                 */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      transition: opacity 0.16s ease;
+    }
+    .lightbox[hidden] {
+      display: none;
+    }
+    .lightbox.is-open {
+      opacity: 1;
+    }
+
+    .lightbox-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 10, 9, 0.86);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+
+    .lightbox-panel {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .lightbox-body {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 92vw;
+      max-height: 88vh;
+    }
+    .lightbox-body img {
+      max-width: 92vw;
+      max-height: 88vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid rgba(177, 247, 204, 0.35);
+      box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+    }
+    .lightbox-body iframe {
+      width: min(1100px, 92vw);
+      height: 88vh;
+      border: 1px solid rgba(177, 247, 204, 0.35);
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+    }
+    /* Tall screenshot viewer (landing pages): zoomed in, vertical scroll. */
+    .img-scroll {
+      pointer-events: auto;
+      width: min(900px, 92vw);
+      max-height: 88vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+      border: 1px solid rgba(177, 247, 204, 0.35);
+      background: #ffffff;
+      box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+      text-align: center;
+    }
+    .img-scroll img {
+      display: block;
+      margin: 0 auto;
+      width: 100%;
+      height: auto;
+      max-width: none;
+      max-height: none;
+    }
+
+    /* Multi-page PDF viewer: a scrollable stack of rendered pages (PDF.js). */
+    .pdf-scroll {
+      pointer-events: auto;
+      position: relative;
+      width: min(900px, 92vw);
+      max-height: 88vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+      border: 1px solid rgba(177, 247, 204, 0.35);
+      background: #ffffff;
+      box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+    }
+    .pdf-ph {
+      display: block;
+      width: 100%;
+      background: #ffffff;
+    }
+    .pdf-ph + .pdf-ph {
+      border-top: 1px solid #e5e5e5;
+    }
+    .pdf-page {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* Brief "Loading…" note shown while PDF.js is fetched on first PDF open. */
+    .lb-loading {
+      pointer-events: auto;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--ink);
+      opacity: 0.85;
+    }
+
+    .lightbox-close,
+    .lightbox-prev,
+    .lightbox-next {
+      position: absolute;
+      pointer-events: auto;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(177, 247, 204, 0.35);
+      background-color: rgba(20, 20, 20, 0.82);
+      color: var(--ink);
+      cursor: pointer;
+      font-family: "JetBrains Mono", monospace;
+      transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    }
+    .lightbox-close {
+      top: 0;
+      right: 0;
+      width: 46px;
+      height: 46px;
+      border-radius: 9999px;
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+    .lightbox-prev,
+    .lightbox-next {
+      top: 50%;
+      transform: translateY(-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 9999px;
+      font-size: 1.9rem;
+      line-height: 1;
+    }
+    .lightbox-prev {
+      left: 0;
+    }
+    .lightbox-next {
+      right: 0;
+    }
+    .lightbox-close:hover,
+    .lightbox-prev:hover,
+    .lightbox-next:hover {
+      background-color: var(--sage);
+      color: #16241b;
+    }
+    .lightbox-close:hover {
+      transform: scale(1.06);
+    }
+    .lightbox-close:focus-visible,
+    .lightbox-prev:focus-visible,
+    .lightbox-next:focus-visible {
+      outline: 3px solid var(--sage);
+      outline-offset: 3px;
+    }
+
+    .lightbox-count {
+      position: absolute;
+      pointer-events: none;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    /* Prev / next / counter only appear for carousels. */
+    .lightbox:not(.is-carousel) .lightbox-prev,
+    .lightbox:not(.is-carousel) .lightbox-next,
+    .lightbox:not(.is-carousel) .lightbox-count {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      .fade-up {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+      .cta-button,
+      .calendar-widget,
+      .lightbox,
+      .lightbox-close,
+      .lightbox-prev,
+      .lightbox-next {
+        transition: none;
+      }
+    }
+  </style>
+
+  <script>
+    // Mobile / tablet uniform scale.
+    // Below 1024px the .page renders at a fixed design width (910px) and is
+    // scaled by (viewport / design width) so the phone shows an exact, smaller
+    // copy of the desktop layout. At >=1024px the CSS @media rule takes over
+    // (percentage width + 1.125 scale), so desktop is unaffected. Runs in the
+    // head so the scale is set before first paint (no flash / no overflow).
+    (function () {
+      var DESIGN_WIDTH = 910;
+      function setScale() {
+        document.documentElement.style.setProperty(
+          "--page-scale",
+          String(window.innerWidth / DESIGN_WIDTH)
+        );
+      }
+      setScale();
+      window.addEventListener("resize", setScale);
+      window.addEventListener("orientationchange", setScale);
+    })();
+  </script>
+
+  <!-- PDF.js is no longer loaded up front. It is fetched on demand the first -->
+  <!-- time a PDF deliverable is opened (see showPdf in the lightbox script), -->
+  <!-- so it costs nothing on initial page load. It still renders multi-page  -->
+  <!-- PDFs into the lightbox (a native <iframe> only shows page 1 on iOS).   -->
+</head>
+
+<body>
+  <!-- ATMOSPHERE LAYERS -->
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+  <div class="grain-overlay" aria-hidden="true"></div>
+
+  <div class="page-clip">
+  <div class="page">
+    <!-- ============================================================= -->
+    <!-- HERO -->
+    <!-- Spacing rhythm (hero gaps halved; the deliverables section keeps  -->
+    <!-- its larger doubled rhythm):                                       -->
+    <!--   Top-of-page -> eyebrow = 32px (pt-8), eyebrow -> headline       -->
+    <!--   = 32px (mt-8); the two gaps are equal.                          -->
+    <!--   Headline -> subheadline = 24px (mt-6).                          -->
+    <!--   40px (mt-10) for subheadline->video and video->button.         -->
+    <!-- ============================================================= -->
+    <header class="pt-8 pb-0">
+      <div class="container-narrow">
+        <p class="eyebrow fade-up">For Nathan Miller</p>
+
+        <h1 class="heading fade-up mt-8" style="font-size: 38.622px;">
+          I've Spent The Last <span style="color: var(--sage);">Five</span> Days Working<br />
+          On <u>Something</u> That Allows You To Do<br />
+          An Extra <span style="color: var(--sage);">$20-30k</span> Per Month<br />
+          Selling <em>Scale Theory</em> <u>One To Many</u>
+        </h1>
+
+        <p class="body-copy fade-up mt-6" style="color: var(--muted); font-size: 1.0931rem;">
+          (the video right below will explain everything)
+        </p>
+
+        <!-- LOOM VIDEO FRAME -->
+        <div class="video-frame fade-up mt-10">
+          <iframe
+            src="[LOOM_EMBED_URL]"
+            title="Walkthrough for Nathan Miller"
+            allowfullscreen
+            allow="autoplay; fullscreen; picture-in-picture">
+          </iframe>
+        </div>
+
+        <!-- CALL TO ACTION -->
+        <div class="fade-up mt-10">
+          <!-- CTA: reveals the in-page booking widget below (JS). The href is  -->
+          <!-- a no-JS fallback that opens the Calendly page in a new tab.       -->
+          <a href="https://calendly.com/leo-carbon-consulting/discovery-call"
+             class="cta-button" id="cta-book"
+             aria-controls="calendar-widget" aria-expanded="false"
+             target="_blank" rel="noopener noreferrer">
+            <span class="cta-main">I'll Hear You Out</span>
+            <span class="cta-sub">Click Here To Schedule A Discovery Call…</span>
+          </a>
+        </div>
+
+        <!-- IN-PAGE BOOKING WIDGET -->
+        <!-- Same design + width as the sample-deliverable type widgets, holding -->
+        <!-- the Calendly scheduling embed. Hidden until the CTA is clicked.     -->
+        <div class="deliverables-scale">
+          <div class="row-widget calendar-widget mt-10" id="calendar-widget" hidden>
+            <div class="calendar-frame">
+              <iframe
+                src="https://calendly.com/leo-carbon-consulting/discovery-call"
+                title="Schedule a discovery call with Carbon Consulting"
+                loading="lazy"
+                allow="fullscreen">
+              </iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============================================================= -->
+    <!-- SAMPLE DELIVERABLES -->
+    <!-- TWO-AXIS SHOWCASE:                                              -->
+    <!--   VERTICAL  - scroll down through four deliverable-type widgets.-->
+    <!--   HORIZONTAL- swipe right through each type's individual samples.-->
+    <!-- Each card: centered name -> CTA. The CTA opens the asset in the  -->
+    <!-- in-page lightbox, and also carries a real href to the file as a  -->
+    <!-- no-JS fallback.                                                  -->
+    <!-- ============================================================= -->
+    <section class="pt-10 pb-20">
+      <div class="container-narrow">
+        <h2 class="heading fade-up" style="font-size: 41.4px;">
+          Here Are The Sample Deliverables:
+        </h2>
+
+        <div class="deliverables-scale">
+        <!-- ============ WIDGET 1: AD CREATIVES ============ -->
+        <div class="row-widget fade-up mt-10">
+          <h3 class="row-heading">Ad Creatives</h3>
+
+          <div class="deliverables-slider mt-8">
+
+            <!-- SAMPLE: Static -->
+            <article class="block-card">
+              <p class="sample-label">Single<span class="sample-sub">(Static)</span></p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Single%20(Static).jpg"
+                   data-lb data-lb-type="image" data-lb-title="Static ad creative"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Direct-To-Camera (video ad script, PDF) -->
+            <article class="block-card">
+              <p class="sample-label">Direct-To-Camera<span class="sample-sub">(Video)</span></p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Direct-to-camera%20(Video).pdf"
+                   data-lb data-lb-type="pdf" data-lb-title="Direct-to-camera video ad script"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Story Sequence (static frames, shown as a carousel) -->
+            <article class="block-card">
+              <p class="sample-label">Story Sequence<span class="sample-sub">(Static)</span></p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Story%20Sequence%20(Static)/Story%201.jpg"
+                   data-lb data-lb-type="carousel" data-lb-title="Story sequence ad creative"
+                   data-lb-srcs="Sample%20Deliverables/Story%20Sequence%20(Static)/Story%201.jpg|Sample%20Deliverables/Story%20Sequence%20(Static)/Story%202.jpg|Sample%20Deliverables/Story%20Sequence%20(Static)/Story%203.jpg"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Selfie (video ad script, PDF) -->
+            <article class="block-card">
+              <p class="sample-label">Selfie<span class="sample-sub">(Video)</span></p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Selfie%20(Video).pdf"
+                   data-lb data-lb-type="pdf" data-lb-title="Selfie video ad script"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Carousel (5 slides) -->
+            <article class="block-card">
+              <p class="sample-label">Carousel<span class="sample-sub">(Static)</span></p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Carousel%20(Static)/Slide%201.jpg"
+                   data-lb data-lb-type="carousel" data-lb-title="Carousel ad creative"
+                   data-lb-srcs="Sample%20Deliverables/Carousel%20(Static)/Slide%201.jpg|Sample%20Deliverables/Carousel%20(Static)/Slide%202.jpg|Sample%20Deliverables/Carousel%20(Static)/Slide%203.jpg|Sample%20Deliverables/Carousel%20(Static)/Slide%204.jpg|Sample%20Deliverables/Carousel%20(Static)/Slide%205.jpg"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+          </div>
+
+          <p class="slider-hint mt-4">Swipe to browse &rarr;</p>
+        </div>
+
+        <!-- ============ WIDGET 2: LANDING PAGES ============ -->
+        <div class="row-widget fade-up mt-10">
+          <h3 class="row-heading">Landing Pages</h3>
+
+          <div class="deliverables-slider mt-8">
+
+            <!-- SAMPLE: Registration -->
+            <article class="block-card">
+              <p class="sample-label">Registration</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Registration.png"
+                   data-lb data-lb-type="scroll-image" data-lb-title="Registration page"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Thank You -->
+            <article class="block-card">
+              <p class="sample-label">Thank You</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Thank%20You.png"
+                   data-lb data-lb-type="scroll-image" data-lb-title="Thank you page"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Replay -->
+            <article class="block-card">
+              <p class="sample-label">Replay</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Replay.png"
+                   data-lb data-lb-type="scroll-image" data-lb-title="Replay page"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+          </div>
+
+          <p class="slider-hint mt-4">Swipe to browse &rarr;</p>
+        </div>
+
+        <!-- ============ WIDGET 3: SLIDESHOW ============ -->
+        <div class="row-widget fade-up mt-10">
+          <h3 class="row-heading">Slideshow</h3>
+
+          <div class="deliverables-slider is-single mt-8">
+
+            <!-- SAMPLE: Slideshow (PDF) -->
+            <article class="block-card">
+              <p class="sample-label">Slideshow</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="[ASSET_SLIDESHOW]"
+                   data-lb data-lb-type="pdf" data-lb-title="Webinar slideshow"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+        <!-- ============ WIDGET 4: SEQUENCES ============ -->
+        <div class="row-widget fade-up mt-10">
+          <h3 class="row-heading">Sequences</h3>
+
+          <div class="deliverables-slider mt-8">
+
+            <!-- SAMPLE: Pre-Webinar (PDF) -->
+            <article class="block-card">
+              <p class="sample-label">Pre-Webinar</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Pre-Webinar.pdf"
+                   data-lb data-lb-type="pdf" data-lb-title="Pre-webinar email sequence"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Post-Webinar (PDF) -->
+            <article class="block-card">
+              <p class="sample-label">Post-Webinar</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Post-Webinar.pdf"
+                   data-lb data-lb-type="pdf" data-lb-title="Post-webinar email sequence"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+            <!-- SAMPLE: Pre-Call (PDF) -->
+            <article class="block-card">
+              <p class="sample-label">Pre-Call</p>
+              <div class="mt-6">
+                <a class="cta-button cta-sm"
+                   href="Sample%20Deliverables/Pre-Call.pdf"
+                   data-lb data-lb-type="pdf" data-lb-title="Pre-call email sequence"
+                   target="_blank" rel="noopener noreferrer">
+                  <span class="cta-main">Get A Closer View</span>
+                  <span class="cta-sub">Click here to open it up...</span>
+                </a>
+              </div>
+            </article>
+
+          </div>
+
+          <p class="slider-hint mt-4">Swipe to browse &rarr;</p>
+        </div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+  </div>
+
+  <!-- ============ LIGHTBOX (rendered outside the scaled .page) ============ -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true"
+       aria-label="Sample deliverable preview" hidden>
+    <div class="lightbox-backdrop" data-lb-dismiss></div>
+    <div class="lightbox-panel">
+      <button class="lightbox-close" type="button" aria-label="Close preview">&times;</button>
+      <button class="lightbox-prev" type="button" aria-label="Previous slide">&#8249;</button>
+      <div class="lightbox-body"></div>
+      <button class="lightbox-next" type="button" aria-label="Next slide">&#8250;</button>
+      <p class="lightbox-count" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <script>
+    // Fade-up on scroll via IntersectionObserver.
+    (function () {
+      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var items = document.querySelectorAll(".fade-up");
+
+      if (reduce || !("IntersectionObserver" in window)) {
+        items.forEach(function (el) {
+          el.classList.add("is-visible");
+        });
+        return;
+      }
+
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+      );
+
+      items.forEach(function (el) {
+        observer.observe(el);
+      });
+    })();
+
+    // ===========================================================
+    // IN-PAGE LIGHTBOX
+    // Opens a deliverable (image / PDF / image carousel) in a full-viewport
+    // overlay instead of navigating away. Triggers are any <a data-lb>; each
+    // keeps a real href so it still works if JS is disabled.
+    // ===========================================================
+    (function () {
+      var lb = document.getElementById("lightbox");
+      if (!lb) return;
+
+      var body = lb.querySelector(".lightbox-body");
+      var btnClose = lb.querySelector(".lightbox-close");
+      var btnPrev = lb.querySelector(".lightbox-prev");
+      var btnNext = lb.querySelector(".lightbox-next");
+      var counter = lb.querySelector(".lightbox-count");
+      var backdrop = lb.querySelector(".lightbox-backdrop");
+      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      var lastFocus = null;
+      var car = null; // carousel state: { srcs: [], i: 0, title: "" }
+
+      // PDF.js is loaded lazily the first time a PDF is opened (see showPdf).
+      // pdfReq tracks the latest open request so a slow load can't render into
+      // a lightbox the user has since closed or replaced with another asset.
+      var pdfReq = 0;
+      var pdfJsLoading = false;
+      var pdfJsWaiters = [];
+      function ensurePdfJs(cb) {
+        if (window.pdfjsLib) return cb(true);
+        pdfJsWaiters.push(cb);
+        if (pdfJsLoading) return;
+        pdfJsLoading = true;
+        var s = document.createElement("script");
+        s.src =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+        s.async = true;
+        s.onload = function () {
+          var ws = pdfJsWaiters;
+          pdfJsWaiters = [];
+          ws.forEach(function (f) { f(true); });
+        };
+        s.onerror = function () {
+          pdfJsLoading = false;
+          var ws = pdfJsWaiters;
+          pdfJsWaiters = [];
+          ws.forEach(function (f) { f(false); });
+        };
+        document.head.appendChild(s);
+      }
+      function showPdfLoading() {
+        clear();
+        var note = document.createElement("div");
+        note.className = "lb-loading";
+        note.textContent = "Loading…";
+        body.appendChild(note);
+      }
+      function showPdfFallback(src, title) {
+        clear();
+        var frame = document.createElement("iframe");
+        frame.src = src;
+        frame.title = title || "Sample deliverable";
+        body.appendChild(frame);
+      }
+
+      function clear() {
+        body.innerHTML = "";
+      }
+
+      function showImage(src, alt) {
+        clear();
+        var img = document.createElement("img");
+        img.decoding = "async";
+        img.src = src;
+        img.alt = alt || "Sample deliverable";
+        body.appendChild(img);
+      }
+
+      // Tall screenshots (landing pages): show roughly a quarter at a time in a
+      // vertical scroller, zoomed in enough to read, so you slide through it
+      // rather than seeing the whole page shrunk to fit at once.
+      function showScrollImage(src, title) {
+        clear();
+        var box = document.createElement("div");
+        box.className = "img-scroll";
+        var img = document.createElement("img");
+        img.decoding = "async";
+        img.alt = title || "Sample deliverable";
+        img.onload = function () {
+          var vh = box.clientHeight || Math.round(window.innerHeight * 0.88);
+          var ratio = img.naturalWidth / img.naturalHeight;
+          // Width chosen so the on-screen height is ~4x the viewport, i.e. ~25%
+          // of the page is visible at once (capped at the box width).
+          var w = Math.round(vh * 4 * ratio);
+          img.style.width = Math.min(w, box.clientWidth) + "px";
+        };
+        img.src = src;
+        box.appendChild(img);
+        body.appendChild(box);
+      }
+
+      function showPdf(src, title) {
+        clear();
+        // PDF.js is fetched on demand the first time a PDF is opened. While it
+        // loads, show a lightweight note; once ready, re-enter to render. If
+        // the fetch fails, fall back to a native iframe (the no-JS href also
+        // opens the PDF in a new tab, which pages correctly on the device).
+        if (!window.pdfjsLib) {
+          var myReq = ++pdfReq;
+          showPdfLoading();
+          ensurePdfJs(function (ok) {
+            if (myReq !== pdfReq || lb.hidden) return; // superseded or closed
+            if (ok && window.pdfjsLib) showPdf(src, title);
+            else showPdfFallback(src, title);
+          });
+          return;
+        }
+        var scroller = document.createElement("div");
+        scroller.className = "pdf-scroll";
+        scroller.setAttribute("aria-label", title || "PDF document");
+        body.appendChild(scroller);
+        if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        window.pdfjsLib
+          .getDocument(src)
+          .promise.then(function (pdf) {
+            var targetW = scroller.clientWidth || 880;
+
+            // Draw one page into its placeholder.
+            function renderInto(ph) {
+              if (ph.__rendered) return;
+              ph.__rendered = true;
+              pdf.getPage(Number(ph.getAttribute("data-page"))).then(function (page) {
+                var base = page.getViewport({ scale: 1 });
+                var viewport = page.getViewport({ scale: (targetW / base.width) * dpr });
+                var canvas = document.createElement("canvas");
+                canvas.className = "pdf-page";
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                ph.style.height = "auto";
+                ph.innerHTML = "";
+                ph.appendChild(canvas);
+                page.render({ canvasContext: canvas.getContext("2d"), viewport: viewport });
+              });
+            }
+
+            // Release a page that has scrolled far away (frees canvas memory).
+            function freeInto(ph) {
+              if (!ph.__rendered) return;
+              ph.__rendered = false;
+              ph.innerHTML = "";
+              ph.style.height = ph.__estH + "px";
+            }
+
+            // Render pages only as they approach the viewport and release ones
+            // scrolled well away — keeps memory bounded for big decks (this
+            // slideshow is 100 pages) so mobile Safari doesn't run out of memory.
+            // Render only the pages near the viewport and release the rest, so
+            // a big deck (this slideshow is 100 pages) never holds 100 canvases
+            // in memory at once — important for mobile Safari. Driven by scroll
+            // position and run once immediately so page 1 shows right away.
+            var phs = [];
+            function update() {
+              var top = scroller.scrollTop;
+              var vh = scroller.clientHeight;
+              for (var i = 0; i < phs.length; i++) {
+                var ph = phs[i];
+                var pTop = ph.offsetTop;
+                var pBot = pTop + ph.offsetHeight;
+                if (pBot > top - 800 && pTop < top + vh + 800) renderInto(ph);
+                else freeInto(ph);
+              }
+            }
+
+            // Size every placeholder from page 1's aspect ratio up front so the
+            // scrollbar is correct before anything is rendered.
+            pdf.getPage(1).then(function (p1) {
+              var base = p1.getViewport({ scale: 1 });
+              var estH = Math.round(targetW * (base.height / base.width));
+              for (var n = 1; n <= pdf.numPages; n++) {
+                var ph = document.createElement("div");
+                ph.className = "pdf-ph";
+                ph.setAttribute("data-page", n);
+                ph.__estH = estH;
+                ph.style.height = estH + "px";
+                scroller.appendChild(ph);
+                phs.push(ph);
+              }
+              scroller.addEventListener("scroll", update);
+              update();
+            });
+          })
+          .catch(function () {
+            scroller.remove();
+            var frame = document.createElement("iframe");
+            frame.src = src;
+            frame.title = title || "Sample deliverable";
+            body.appendChild(frame);
+          });
+      }
+
+      function renderCarousel() {
+        showImage(car.srcs[car.i], car.title + " — slide " + (car.i + 1));
+        counter.textContent = car.i + 1 + " / " + car.srcs.length;
+        // Warm the neighbouring slides so left/right navigation is instant.
+        [1, -1].forEach(function (d) {
+          var j = (car.i + d + car.srcs.length) % car.srcs.length;
+          var pre = new Image();
+          pre.decoding = "async";
+          pre.src = car.srcs[j];
+        });
+      }
+
+      function nav(delta) {
+        if (!car) return;
+        car.i = (car.i + delta + car.srcs.length) % car.srcs.length;
+        renderCarousel();
+      }
+
+      function open(opts) {
+        lastFocus = document.activeElement;
+        car = null;
+        lb.classList.remove("is-carousel");
+
+        if (opts.type === "pdf") {
+          showPdf(opts.src, opts.title);
+        } else if (opts.type === "scroll-image") {
+          showScrollImage(opts.src, opts.title);
+        } else if (opts.type === "carousel") {
+          car = { srcs: opts.srcs, i: 0, title: opts.title || "Carousel" };
+          lb.classList.add("is-carousel");
+          renderCarousel();
+        } else {
+          showImage(opts.src, opts.title);
+        }
+
+        lb.hidden = false;
+        if (!reduce) {
+          // Force a reflow so the opacity transition runs from 0.
+          void lb.offsetWidth;
+        }
+        lb.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+        btnClose.focus();
+        document.addEventListener("keydown", onKey);
+      }
+
+      function close() {
+        lb.classList.remove("is-open");
+        function done() {
+          lb.hidden = true;
+          clear();
+          counter.textContent = "";
+          document.body.style.overflow = "";
+          document.removeEventListener("keydown", onKey);
+          if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+        if (reduce) done();
+        else setTimeout(done, 170);
+      }
+
+      function onKey(e) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          close();
+        } else if (e.key === "ArrowLeft") {
+          nav(-1);
+        } else if (e.key === "ArrowRight") {
+          nav(1);
+        } else if (e.key === "Tab") {
+          // Minimal focus trap across the currently visible controls.
+          var vis = [];
+          [btnClose, btnPrev, btnNext].forEach(function (b) {
+            if (b.offsetParent !== null) vis.push(b);
+          });
+          if (!vis.length) return;
+          var first = vis[0];
+          var last = vis[vis.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+
+      document.querySelectorAll("a[data-lb]").forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          var type = a.getAttribute("data-lb-type") || "image";
+          var title = a.getAttribute("data-lb-title") || "";
+          if (type === "carousel") {
+            var srcs = (a.getAttribute("data-lb-srcs") || "")
+              .split("|")
+              .filter(Boolean);
+            open({ type: "carousel", srcs: srcs, title: title });
+          } else {
+            open({ type: type, src: a.getAttribute("href"), title: title });
+          }
+        });
+      });
+
+      btnClose.addEventListener("click", close);
+      btnPrev.addEventListener("click", function () {
+        nav(-1);
+      });
+      btnNext.addEventListener("click", function () {
+        nav(1);
+      });
+      backdrop.addEventListener("click", close);
+    })();
+
+    // ===========================================================
+    // IN-PAGE BOOKING WIDGET
+    // The hero CTA reveals a Calendly embed styled like the deliverable
+    // widgets, instead of navigating away. The anchor keeps a real href so it
+    // still opens Calendly in a new tab if JS is disabled. Revealing the widget
+    // changes the page height; the ResizeObserver below re-fits the page-clip.
+    // ===========================================================
+    (function () {
+      var cta = document.getElementById("cta-book");
+      var widget = document.getElementById("calendar-widget");
+      if (!cta || !widget) return;
+      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function openWidget() {
+        widget.hidden = false;
+        cta.setAttribute("aria-expanded", "true");
+        if (!reduce) {
+          // Force a reflow so the reveal transition runs from 0.
+          void widget.offsetWidth;
+        }
+        widget.classList.add("is-open");
+        widget.scrollIntoView({
+          behavior: reduce ? "auto" : "smooth",
+          block: "start",
+        });
+      }
+
+      function closeWidget() {
+        cta.setAttribute("aria-expanded", "false");
+        widget.classList.remove("is-open");
+        if (reduce) {
+          widget.hidden = true;
+          return;
+        }
+        // Hide only after the fade-out finishes so it animates out cleanly.
+        widget.addEventListener("transitionend", function onEnd(e) {
+          if (e.target !== widget || e.propertyName !== "opacity") return;
+          widget.removeEventListener("transitionend", onEnd);
+          // Guard against a re-open that happened mid fade-out.
+          if (!widget.classList.contains("is-open")) widget.hidden = true;
+        });
+      }
+
+      cta.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (widget.hidden) openWidget();
+        else closeWidget();
+      });
+    })();
+
+    // ===========================================================
+    // SCALE HEIGHT COMPENSATION
+    // .page is shrunk with transform: scale(0.5625). A transform does not
+    // change the element's layout box, so without help the document keeps
+    // its full unscaled height and leaves a large empty gap below the
+    // content. We size the .page-clip wrapper to the page's visual height
+    // and let its overflow:hidden clip the leftover, so the document ends
+    // exactly where the visible content does.
+    // ===========================================================
+    (function () {
+      var page = document.querySelector(".page");
+      var clip = document.querySelector(".page-clip");
+      if (!page || !clip) return;
+
+      function fit() {
+        // getBoundingClientRect() returns the post-transform (visual) height,
+        // consistently across engines. Set the clipping wrapper to exactly
+        // that height so the document ends where the visible content does and
+        // the leftover unscaled layout height is clipped away.
+        var visualHeight = page.getBoundingClientRect().height;
+        clip.style.height = visualHeight + "px";
+      }
+
+      // Run on the next frame so layout is settled, and re-run on every event
+      // that can change the content height (font swap, image load, resize).
+      function fitSoon() {
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(fit);
+        } else {
+          fit();
+        }
+      }
+
+      fitSoon();
+      document.addEventListener("DOMContentLoaded", fitSoon);
+      window.addEventListener("load", fitSoon);
+      window.addEventListener("resize", fitSoon);
+      window.addEventListener("orientationchange", fitSoon);
+
+      // Web fonts reflow the page after they load; re-fit once they're ready.
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(fitSoon);
+      }
+
+      // Catch any other late content-box changes.
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(fitSoon).observe(page);
+      }
+    })();
+  </script>
+</body>
+</html>
