@@ -1,0 +1,9 @@
+# Force LF for text files so the Dockerfile/Caddyfile work on Railway's
+# Linux builder regardless of the committer's OS line-ending settings.
+* text=auto eol=lf
+
+# Never normalize binary assets.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.pdf binary
