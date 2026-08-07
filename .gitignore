@@ -4,3 +4,6 @@
 # OS junk
 Thumbs.db
 .DS_Store
+
+# Stray local video recordings (never deploy; exceed GitHub's file-size limit)
+*.mp4
