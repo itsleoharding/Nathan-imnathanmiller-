@@ -7,3 +7,5 @@ Thumbs.db
 
 # Stray local video recordings (never deploy; exceed GitHub's file-size limit)
 *.mp4
+# ...except the deployable, recompressed hero video (kept under 100 MB)
+!Video.mp4

@@ -14,17 +14,10 @@
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://calendly.com" />
   <link rel="preconnect" href="https://assets.calendly.com" crossorigin />
-  <link rel="preconnect" href="https://fast.wistia.com" />
-  <link rel="preconnect" href="https://fast.wistia.net" crossorigin />
-  <link rel="preconnect" href="https://embed-ssl.wistia.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Roboto+Slab:wght@400;900&display=swap"
     rel="stylesheet"
   />
-
-  <!-- Wistia Aurora player runtime + this media's module (hero video). -->
-  <script src="https://fast.wistia.com/player.js" async></script>
-  <script src="https://fast.wistia.com/embed/gsmht83wex.js" async type="module"></script>
 
   <style>
     :root {
@@ -253,19 +246,40 @@
       height: 100%;
       border: 0;
     }
-    .video-frame wistia-player {
-      display: block;
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-    }
-    .video-frame wistia-player[media-id='gsmht83wex']:not(:defined) {
-      background: #000 center / contain no-repeat
-        url('https://fast.wistia.com/embed/medias/gsmht83wex/swatch');
-      filter: blur(5px);
-    }
+    /* ============ SELF-HOSTED HERO VIDEO PLAYER ============ */
+    /* Sage-on-charcoal custom controls over a native <video>; the thumbnail   */
+    /* poster shows until first play. Fills the 16:9 .video-frame.             */
+    .vplayer { position:absolute; inset:0; overflow:hidden; background:#000; cursor:pointer; }
+    .vplayer video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; display:block; }
+    .vp-bigplay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:84px; height:84px; padding:0; border:0; border-radius:9999px; background-color:var(--sage); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:3; box-shadow:0 14px 40px -10px rgba(177,247,204,.55); transition:transform .15s ease, opacity .2s ease; }
+    .vp-bigplay svg { width:34px; height:34px; margin-left:5px; fill:#16241b; }
+    .vp-bigplay:hover { transform:translate(-50%,-50%) scale(1.06); }
+    .vp-bigplay:focus-visible { outline:3px solid var(--ink); outline-offset:3px; }
+    .vplayer.vp-playing .vp-bigplay { opacity:0; pointer-events:none; }
+    .vp-bar { position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; align-items:center; gap:14px; padding:30px 18px 14px; background:linear-gradient(to top, rgba(8,10,9,.78), rgba(8,10,9,0)); opacity:1; transition:opacity .25s ease; }
+    .vplayer.vp-playing.vp-idle .vp-bar { opacity:0; }
+    .vplayer.vp-playing.vp-idle { cursor:none; }
+    .vp-btn { flex:0 0 auto; width:34px; height:34px; padding:0; border:0; border-radius:9999px; background:transparent; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:var(--sage); transition:transform .15s ease, color .15s ease; }
+    .vp-btn svg { width:22px; height:22px; fill:currentColor; }
+    .vp-btn:hover { transform:scale(1.12); color:#fff; }
+    .vp-btn:focus-visible { outline:2px solid var(--sage); outline-offset:3px; }
+    .vp-i-pause, .vp-i-exitfs { display:none; }
+    .vplayer.vp-playing .vp-play .vp-i-play { display:none; }
+    .vplayer.vp-playing .vp-play .vp-i-pause { display:block; }
+    .vplayer.vp-fsactive .vp-fs .vp-i-fs { display:none; }
+    .vplayer.vp-fsactive .vp-fs .vp-i-exitfs { display:block; }
+    .vp-progress { flex:1 1 auto; display:flex; align-items:center; height:20px; cursor:pointer; touch-action:none; }
+    .vp-track { position:relative; width:100%; height:5px; border-radius:9999px; background:rgba(255,255,255,.25); }
+    .vp-buffered, .vp-played { position:absolute; left:0; top:0; height:100%; width:0%; border-radius:9999px; }
+    .vp-buffered { background:rgba(255,255,255,.3); }
+    .vp-played { background:var(--sage); }
+    .vp-handle { position:absolute; top:50%; left:0; width:13px; height:13px; border-radius:9999px; background:var(--sage); transform:translate(-50%,-50%); box-shadow:0 2px 8px rgba(0,0,0,.55); opacity:0; transition:opacity .15s ease; }
+    .vp-progress:hover .vp-handle, .vp-progress:focus-visible .vp-handle, .vplayer.vp-scrubbing .vp-handle { opacity:1; }
+    .vp-progress:focus-visible { outline:none; }
+    .vplayer:fullscreen { width:100vw; height:100vh; background:#000; }
+    .vplayer:fullscreen video { object-fit:contain; }
+    .vplayer:-webkit-full-screen { width:100vw; height:100vh; background:#000; }
+    .vplayer:-webkit-full-screen video { object-fit:contain; }
 
     .play-button {
       position: absolute;
@@ -1052,9 +1066,34 @@
           (the video right below will explain everything)
         </p>
 
-        <!-- HERO VIDEO — Wistia Aurora player, hardwired to 1.5x (pitch preserved). -->
+        <!-- HERO VIDEO — self-hosted sage player, thumbnail poster, 1.5x default. -->
         <div class="video-frame fade-up mt-10">
-          <wistia-player media-id="gsmht83wex" aspect="1.7777777777777777" playback-rate="1.5"></wistia-player>
+          <div class="vplayer" id="vplayer" tabindex="0" aria-label="Walkthrough video">
+            <video id="hero-video" src="Video.mp4" poster="Thumbnail.png" playsinline preload="metadata">
+              Your browser does not support embedded video. You can
+              <a href="Video.mp4">download the walkthrough</a> instead.
+            </video>
+            <button class="vp-bigplay" id="vp-bigplay" type="button" aria-label="Play video">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+            </button>
+            <div class="vp-bar" id="vp-bar">
+              <button class="vp-btn vp-play" id="vp-play" type="button" aria-label="Play / pause">
+                <svg class="vp-i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                <svg class="vp-i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"></path></svg>
+              </button>
+              <div class="vp-progress" id="vp-progress" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                <div class="vp-track">
+                  <div class="vp-buffered" id="vp-buffered"></div>
+                  <div class="vp-played" id="vp-played"></div>
+                  <div class="vp-handle" id="vp-handle"></div>
+                </div>
+              </div>
+              <button class="vp-btn vp-fs" id="vp-fs" type="button" aria-label="Fullscreen">
+                <svg class="vp-i-fs" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H3v4h2V5h2V3zm10 0v2h2v2h2V3h-4zM5 17H3v4h4v-2H5v-2zm14 0v2h-2v2h4v-4h-2z"></path></svg>
+                <svg class="vp-i-exitfs" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7v2H5v2h4V5zm6 0v4h4V7h-2V5h-2zM5 15v2h2v2h2v-4H5zm10 0v4h2v-2h2v-2h-4z"></path></svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- CALL TO ACTION -->
@@ -1384,23 +1423,57 @@
   </div>
 
   <script>
-    // HERO VIDEO — hardwired 1.5x, pitch preserved (Aurora player).
+    // HERO VIDEO — self-hosted custom player, 1.5x default (pitch preserved).
     (function () {
-      var RATE = 1.5;
-      var el = document.querySelector('wistia-player[media-id="gsmht83wex"]');
-      if (!el) return;
-      function apply() {
-        try { if (el.playbackRate !== RATE) el.playbackRate = RATE; } catch (e) {}
+      var wrap = document.getElementById("vplayer");
+      var v = document.getElementById("hero-video");
+      if (!wrap || !v) return;
+      var bigplay = document.getElementById("vp-bigplay"), playBtn = document.getElementById("vp-play"),
+          fsBtn = document.getElementById("vp-fs"), prog = document.getElementById("vp-progress"),
+          played = document.getElementById("vp-played"), buffered = document.getElementById("vp-buffered"),
+          handle = document.getElementById("vp-handle");
+      var RATE = 1.5, idleTimer = null;
+      function applyRate() {
+        if ("preservesPitch" in v) v.preservesPitch = true;
+        if ("mozPreservesPitch" in v) v.mozPreservesPitch = true;
+        if ("webkitPreservesPitch" in v) v.webkitPreservesPitch = true;
+        if (v.playbackRate !== RATE) v.playbackRate = RATE;
       }
-      function wire() {
-        apply();
-        ["play", "playing", "ended", "seeked", "seek", "end"].forEach(function (ev) {
-          el.addEventListener(ev, apply);
-        });
+      applyRate();
+      v.addEventListener("loadedmetadata", function(){ applyRate(); update(); });
+      function toggle(){ if (v.paused) v.play(); else v.pause(); }
+      v.addEventListener("play", function(){ applyRate(); wrap.classList.add("vp-playing"); showBar(); });
+      v.addEventListener("pause", function(){ wrap.classList.remove("vp-playing"); showBar(); });
+      v.addEventListener("ended", function(){ wrap.classList.remove("vp-playing"); showBar(); });
+      v.addEventListener("click", function(e){ e.stopPropagation(); toggle(); });
+      bigplay.addEventListener("click", function(e){ e.stopPropagation(); toggle(); });
+      playBtn.addEventListener("click", function(e){ e.stopPropagation(); toggle(); });
+      function pct(x){ return (Math.max(0,Math.min(1,x))*100)+"%"; }
+      function update(){
+        if (!v.duration || isNaN(v.duration)) return;
+        var f = v.currentTime / v.duration;
+        played.style.width = pct(f); handle.style.left = pct(f);
+        prog.setAttribute("aria-valuenow", Math.round(f*100));
+        if (v.buffered && v.buffered.length) buffered.style.width = pct(v.buffered.end(v.buffered.length-1)/v.duration);
       }
-      if (window.customElements && customElements.whenDefined) {
-        customElements.whenDefined("wistia-player").then(wire);
-      } else { wire(); }
+      v.addEventListener("timeupdate", update);
+      v.addEventListener("progress", update);
+      function seekTo(clientX){ var r = prog.getBoundingClientRect(); var f = Math.max(0,Math.min(1,(clientX-r.left)/r.width)); if (v.duration){ v.currentTime = f*v.duration; update(); } }
+      var dragging = false;
+      prog.addEventListener("pointerdown", function(e){ e.stopPropagation(); dragging = true; wrap.classList.add("vp-scrubbing"); if (prog.setPointerCapture) prog.setPointerCapture(e.pointerId); seekTo(e.clientX); });
+      prog.addEventListener("pointermove", function(e){ if (dragging) seekTo(e.clientX); });
+      function endDrag(){ if (dragging){ dragging = false; wrap.classList.remove("vp-scrubbing"); } }
+      prog.addEventListener("pointerup", endDrag); prog.addEventListener("pointercancel", endDrag);
+      prog.addEventListener("keydown", function(e){ if (!v.duration) return; if (e.key==="ArrowRight"){ v.currentTime=Math.min(v.duration,v.currentTime+5); update(); e.preventDefault(); } else if (e.key==="ArrowLeft"){ v.currentTime=Math.max(0,v.currentTime-5); update(); e.preventDefault(); } });
+      function inFs(){ return document.fullscreenElement===wrap || document.webkitFullscreenElement===wrap; }
+      fsBtn.addEventListener("click", function(e){ e.stopPropagation(); if (inFs()){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); } else if (wrap.requestFullscreen){ wrap.requestFullscreen(); } else if (wrap.webkitRequestFullscreen){ wrap.webkitRequestFullscreen(); } else if (v.webkitEnterFullscreen){ v.webkitEnterFullscreen(); } });
+      function onFsChange(){ wrap.classList.toggle("vp-fsactive", inFs()); }
+      document.addEventListener("fullscreenchange", onFsChange);
+      document.addEventListener("webkitfullscreenchange", onFsChange);
+      function showBar(){ wrap.classList.remove("vp-idle"); if (idleTimer) clearTimeout(idleTimer); if (!v.paused) idleTimer = setTimeout(function(){ wrap.classList.add("vp-idle"); }, 2500); }
+      wrap.addEventListener("pointermove", showBar);
+      wrap.addEventListener("pointerleave", function(){ if (!v.paused) wrap.classList.add("vp-idle"); });
+      wrap.addEventListener("keydown", function(e){ if ((e.key===" "||e.key==="Spacebar") && e.target===wrap){ toggle(); e.preventDefault(); } });
     })();
 
     // Fade-up on scroll via IntersectionObserver.
